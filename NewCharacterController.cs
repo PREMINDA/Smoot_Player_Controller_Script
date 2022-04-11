@@ -1,70 +1,97 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
-using TarodevController;
+using System.Linq;
 using UnityEngine;
+using UnityEngine.Serialization;
 
-public class MixPlayerController : MonoBehaviour
+namespace SmoothPlayer
 {
-    [SerializeField]private float speed;
-    [SerializeField]private float jumpForce;
-
-    private BoxCollider2D _bx;
-    private Rigidbody2D _rb;
-    private Collision _collision;
-    
-    public float slideSpeed = 5;
-    void Start()
+    public class NewCharacterController : MonoBehaviour
     {
-        _rb = GetComponent<Rigidbody2D>();
-        _collision = GetComponent<Collision>();
-    }
+        [SerializeField] private Bounds playerBounds;
+        [SerializeField] [Range(0.1f, 0.3f)] private float rayBuffer = 0.1f;
+        [SerializeField] private LayerMask groundLayer;
+        [SerializeField] private float detectionRayLength = 0.1f;
+        [SerializeField] private int detectorCount = 3;
 
-    private void Update()
-    {
-        float movX = Input.GetAxis("Horizontal");
-        float movY = Input.GetAxis("Vertical");
-        Walk(new Vector2(movX,movY));
+        public bool landingThisFrame;
+        
+        private RayRange _raysUp, _raysRight, _raysDown, _raysLeft;
+        private bool _colUp, _colRight, _colDown, _colLeft;
+        private float _timeLeftGrounded;
+        private Boolean _coyoteUsable;
 
-        if (WallGrabe())
+        void Start()
         {
-            _rb.gravityScale = 0f;
-            Debug.Log(_rb.velocity);
-            _rb.velocity = new Vector2(_rb.velocity.x, movY * slideSpeed);
-        }
-        else
-        {
-            _rb.gravityScale = 1.7f;
+
         }
 
-        if (_collision.onWall && !_collision.onGround && !Input.GetKey(KeyCode.LeftShift))
+        // Update is called once per frame
+        void Update()
         {
-            WallSlide();
+            CalculateRayRanged();
+            
+            Debug.DrawRay(_raysUp.Start,_raysUp.Dir,Color.green);
+            Debug.DrawRay(_raysUp.End,_raysUp.Dir,Color.green);
+            
+            Debug.DrawRay(_raysDown.Start,_raysDown.Dir,Color.blue);
+            Debug.DrawRay(_raysDown.End,_raysDown.Dir,Color.blue);
+            
+            Debug.DrawRay(_raysLeft.Start,_raysLeft.Dir,Color.magenta);
+            Debug.DrawRay(_raysLeft.End,_raysLeft.Dir,Color.magenta);
+            
+            Debug.DrawRay(_raysRight.Start,_raysRight.Dir,Color.yellow);
+            Debug.DrawRay(_raysRight.End,_raysRight.Dir,Color.yellow);
+
+        }
+
+        private void CollisionCheck()
+        {
+            CalculateRayRanged();
+
+            landingThisFrame = false;
+            var groundedCheck = RunDetection(_raysDown);
+            if (_colDown && !groundedCheck) _timeLeftGrounded = Time.time;
+            else if (!_colDown && groundedCheck)
+            {
+                _coyoteUsable = true; // Only trigger when first touching
+                landingThisFrame = true;
+            }
+
+            _colDown = groundedCheck;
+
+            _colUp = RunDetection(_raysUp);
+            _colLeft = RunDetection(_raysLeft);
+            _colRight = RunDetection(_raysRight);
         }
         
+        private bool RunDetection(RayRange range) {
+            return EvaluateRayPositions(range).Any(point => Physics2D.Raycast(point, range.Dir, detectionRayLength, groundLayer));
+        }
+        
+        private IEnumerable<Vector2> EvaluateRayPositions(RayRange range) {
+            for (var i = 0; i < detectorCount; i++) {
+                var t = (float)i / (detectorCount - 1);
+                yield return Vector2.Lerp(range.Start, range.End, t);
+            }
+        }
 
-        if (Input.GetButtonDown("Jump"))
+        private void CalculateRayRanged()
         {
-            Jump();
+            var bound = new Bounds(transform.position, playerBounds.size);
+
+            _raysDown = new RayRange(bound.min.x + rayBuffer, bound.min.y, bound.max.x - rayBuffer, bound.min.y, Vector2.down);
+            _raysUp = new RayRange(bound.min.x + rayBuffer, bound.max.y, bound.max.x - rayBuffer, bound.max.y, Vector2.up);
+            _raysLeft = new RayRange(bound.min.x, bound.min.y + rayBuffer, bound.min.x, bound.max.y - rayBuffer, Vector2.left);
+            _raysRight = new RayRange(bound.max.x, bound.min.y + rayBuffer, bound.max.x, bound.max.y - rayBuffer, Vector2.right);
+
+        }
+
+        private void OnDrawGizmos()
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireCube(transform.position + playerBounds.center, playerBounds.size);
         }
     }
-    private bool WallGrabe()
-    {
-        return _collision.onWall && Input.GetKey(KeyCode.LeftShift);
-    }
-    private void WallSlide()
-    {
-        
-        _rb.velocity = new Vector2(_rb.velocity.x, -slideSpeed);
-    }
-    void Walk(Vector2 dir)
-    {
-        _rb.velocity = new Vector2(dir.x*speed*Time.deltaTime+dir.x*speed,_rb.velocity.y);
-    }
-    void Jump()
-    {
-        var velocity = _rb.velocity;
-        velocity = new Vector2(velocity.x, 0);
-        velocity += Vector2.up * jumpForce;
-        _rb.velocity = velocity;
-    }
-    
 }
