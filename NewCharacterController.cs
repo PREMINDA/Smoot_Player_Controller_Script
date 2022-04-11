@@ -1,9 +1,8 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.Serialization;
+
 
 namespace SmoothPlayer
 {
@@ -14,6 +13,10 @@ namespace SmoothPlayer
         [SerializeField] private LayerMask groundLayer;
         [SerializeField] private float detectionRayLength = 0.1f;
         [SerializeField] private int detectorCount = 3;
+        [SerializeField] private float _acceleration = 90;
+        [SerializeField] private float _apexBonus = 2;
+        [SerializeField] private float _minFallSpeed = 80f;
+        [SerializeField] private float _maxFallSpeed = 120f;
 
         public bool landingThisFrame;
         
@@ -21,6 +24,9 @@ namespace SmoothPlayer
         private bool _colUp, _colRight, _colDown, _colLeft;
         private float _timeLeftGrounded;
         private Boolean _coyoteUsable;
+        private float _currentHorizontalSpeed, _currentVerticalSpeed;
+        private float _moveClamp = 13;
+        
 
         void Start()
         {
@@ -86,6 +92,18 @@ namespace SmoothPlayer
             _raysLeft = new RayRange(bound.min.x, bound.min.y + rayBuffer, bound.min.x, bound.max.y - rayBuffer, Vector2.left);
             _raysRight = new RayRange(bound.max.x, bound.min.y + rayBuffer, bound.max.x, bound.max.y - rayBuffer, Vector2.right);
 
+        }
+
+        private void CalculateWalk(float x)
+        {
+            if (x != 0)
+            {
+                _currentHorizontalSpeed += x * _acceleration * Time.deltaTime;
+
+                _currentHorizontalSpeed = Mathf.Clamp(_currentHorizontalSpeed, -_moveClamp, _moveClamp);
+
+                var apexBonus = Mathf.Sign(x) * _apexBonus * _apexPoint;
+            }
         }
 
         private void OnDrawGizmos()
