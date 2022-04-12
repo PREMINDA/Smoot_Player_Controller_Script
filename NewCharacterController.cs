@@ -11,21 +11,32 @@ namespace SmoothPlayer
         [SerializeField] private Bounds playerBounds;
         [SerializeField] [Range(0.1f, 0.3f)] private float rayBuffer = 0.1f;
         [SerializeField] private LayerMask groundLayer;
-        [SerializeField] private float detectionRayLength = 0.1f;
-        [SerializeField] private int detectorCount = 3;
-        [SerializeField] private float _acceleration = 90;
-        [SerializeField] private float _apexBonus = 2;
         [SerializeField] private float _minFallSpeed = 80f;
         [SerializeField] private float _maxFallSpeed = 120f;
 
         public bool landingThisFrame;
         
+        //Calculate Rays
         private RayRange _raysUp, _raysRight, _raysDown, _raysLeft;
+        
+        //Collision Check
+        [SerializeField] private int detectorCount = 3;
+        [SerializeField] private float detectionRayLength = 0.1f;
         private bool _colUp, _colRight, _colDown, _colLeft;
         private float _timeLeftGrounded;
         private Boolean _coyoteUsable;
+        
+        
+        //Calculate Walk
+        [SerializeField] private float _deAcceleration = 60f;
+        [SerializeField] private float _apexBonus = 2;
+        [SerializeField] private float _acceleration = 90f;
         private float _currentHorizontalSpeed, _currentVerticalSpeed;
         private float _moveClamp = 13;
+        
+        
+        //Jump
+        private float _apexPoint;
         
 
         void Start()
@@ -98,11 +109,33 @@ namespace SmoothPlayer
         {
             if (x != 0)
             {
+                //Set horizontal speed
                 _currentHorizontalSpeed += x * _acceleration * Time.deltaTime;
 
+                //set limit to speed
                 _currentHorizontalSpeed = Mathf.Clamp(_currentHorizontalSpeed, -_moveClamp, _moveClamp);
 
                 var apexBonus = Mathf.Sign(x) * _apexBonus * _apexPoint;
+                _currentHorizontalSpeed += apexBonus * Time.deltaTime;
+            }
+            else
+            {
+                //if No input
+                _currentHorizontalSpeed =
+                    Mathf.MoveTowards(_currentHorizontalSpeed, 0, _deAcceleration * Time.deltaTime);
+            }
+            if(_currentHorizontalSpeed>0&& _colRight || _currentHorizontalSpeed<0&&_colLeft)
+            {
+                //Stopping move through wall
+                _currentHorizontalSpeed = 0;
+            }
+        }
+
+        private void CalculateGravity()
+        {
+            if (_colDown)
+            {
+                if (_currentVerticalSpeed < 0) _currentVerticalSpeed = 0;
             }
         }
 
