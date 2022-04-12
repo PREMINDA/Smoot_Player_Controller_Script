@@ -11,8 +11,7 @@ namespace SmoothPlayer
         [SerializeField] private Bounds playerBounds;
         [SerializeField] [Range(0.1f, 0.3f)] private float rayBuffer = 0.1f;
         [SerializeField] private LayerMask groundLayer;
-        [SerializeField] private float _minFallSpeed = 80f;
-        [SerializeField] private float _maxFallSpeed = 120f;
+        
 
         public bool landingThisFrame;
         
@@ -24,8 +23,7 @@ namespace SmoothPlayer
         [SerializeField] private float detectionRayLength = 0.1f;
         private bool _colUp, _colRight, _colDown, _colLeft;
         private float _timeLeftGrounded;
-        private Boolean _coyoteUsable;
-        
+        private bool _coyoteUsable;
         
         //Calculate Walk
         [SerializeField] private float _deAcceleration = 60f;
@@ -34,9 +32,16 @@ namespace SmoothPlayer
         private float _currentHorizontalSpeed, _currentVerticalSpeed;
         private float _moveClamp = 13;
         
-        
         //Jump
+        [SerializeField] private float _minFallSpeed = 80f;
+        [SerializeField] private float _maxFallSpeed = 120f;
+        [SerializeField] private float _jumpEndEarlyGravityModifier = 3;
         private float _apexPoint;
+
+        //Gravity
+        [SerializeField] private bool _releasJumEarly = true;
+        [SerializeField] private float _fallClamp = -40f;
+        private float _fallSpeed;
         
 
         void Start()
@@ -136,6 +141,17 @@ namespace SmoothPlayer
             if (_colDown)
             {
                 if (_currentVerticalSpeed < 0) _currentVerticalSpeed = 0;
+            }
+            else
+            {
+                var fallSpeed = _releasJumEarly && _currentVerticalSpeed > 0
+                    ? _fallSpeed * _jumpEndEarlyGravityModifier
+                    : _fallSpeed;
+
+                _currentVerticalSpeed -= fallSpeed * Time.deltaTime;
+
+                if (_currentVerticalSpeed < _fallClamp) _currentVerticalSpeed = _fallClamp;
+                
             }
         }
 
