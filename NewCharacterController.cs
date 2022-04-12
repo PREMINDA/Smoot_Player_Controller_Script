@@ -12,13 +12,13 @@ namespace SmoothPlayer
         [SerializeField] [Range(0.1f, 0.3f)] private float rayBuffer = 0.1f;
         [SerializeField] private LayerMask groundLayer;
         
-
         public bool landingThisFrame;
         
         //Calculate Rays
         private RayRange _raysUp, _raysRight, _raysDown, _raysLeft;
         
         //Collision Check
+        [Header("Collision")]
         [SerializeField] private int detectorCount = 3;
         [SerializeField] private float detectionRayLength = 0.1f;
         private bool _colUp, _colRight, _colDown, _colLeft;
@@ -26,6 +26,7 @@ namespace SmoothPlayer
         private bool _coyoteUsable;
         
         //Calculate Walk
+        [Header("Walk")]
         [SerializeField] private float _deAcceleration = 60f;
         [SerializeField] private float _apexBonus = 2;
         [SerializeField] private float _acceleration = 90f;
@@ -33,17 +34,22 @@ namespace SmoothPlayer
         private float _moveClamp = 13;
         
         //Jump
+        [Header("Jump")]
+        [SerializeField] private float _jumpHeight = 30;
+        [SerializeField] private float _jumpApexThreshold = 10f;
+        [SerializeField] private float _coyoteTimeThreshold = 0.1f;
+        [SerializeField] private float _jumpBuffer = 0.1f;
+        [SerializeField] private float _jumpEndEarlyGravityModifier = 3;
         [SerializeField] private float _minFallSpeed = 80f;
         [SerializeField] private float _maxFallSpeed = 120f;
-        [SerializeField] private float _jumpEndEarlyGravityModifier = 3;
         private float _apexPoint;
 
         //Gravity
+        [Header("Gravity")]
         [SerializeField] private bool _releasJumEarly = true;
         [SerializeField] private float _fallClamp = -40f;
         private float _fallSpeed;
         
-
         void Start()
         {
 
@@ -119,7 +125,8 @@ namespace SmoothPlayer
 
                 //set limit to speed
                 _currentHorizontalSpeed = Mathf.Clamp(_currentHorizontalSpeed, -_moveClamp, _moveClamp);
-
+                
+                //bonus at the apex jump
                 var apexBonus = Mathf.Sign(x) * _apexBonus * _apexPoint;
                 _currentHorizontalSpeed += apexBonus * Time.deltaTime;
             }
@@ -151,7 +158,6 @@ namespace SmoothPlayer
                 _currentVerticalSpeed -= fallSpeed * Time.deltaTime;
 
                 if (_currentVerticalSpeed < _fallClamp) _currentVerticalSpeed = _fallClamp;
-                
             }
         }
 
