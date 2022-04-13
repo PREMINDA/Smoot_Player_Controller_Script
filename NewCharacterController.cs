@@ -13,6 +13,7 @@ namespace SmoothPlayer
         [SerializeField] private LayerMask groundLayer;
         
         public bool landingThisFrame;
+        public Vector3 Velocity { get; private set; }
         
         //Calculate Rays
         private RayRange _raysUp, _raysRight, _raysDown, _raysLeft;
@@ -158,6 +159,16 @@ namespace SmoothPlayer
                 _currentVerticalSpeed -= fallSpeed * Time.deltaTime;
 
                 if (_currentVerticalSpeed < _fallClamp) _currentVerticalSpeed = _fallClamp;
+            }
+        }
+        
+        private void CalculateJumpApex() {
+            if (!_colDown) {
+                _apexPoint = Mathf.InverseLerp(_jumpApexThreshold, 0, Mathf.Abs(Velocity.y));
+                _fallSpeed = Mathf.Lerp(_minFallSpeed, _maxFallSpeed, _apexPoint);
+            }
+            else {
+                _apexPoint = 0;
             }
         }
 
