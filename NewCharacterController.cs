@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 
 namespace SmoothPlayer
@@ -11,6 +12,8 @@ namespace SmoothPlayer
         [SerializeField] private Bounds playerBounds;
         [SerializeField] [Range(0.1f, 0.3f)] private float rayBuffer = 0.1f;
         [SerializeField] private LayerMask groundLayer;
+        public bool JumpingThisFrame;
+        private PlayerFrameInput _input;
         
         public bool landingThisFrame;
         public Vector3 Velocity { get; private set; }
@@ -43,24 +46,28 @@ namespace SmoothPlayer
         [SerializeField] private float _jumpEndEarlyGravityModifier = 3;
         [SerializeField] private float _minFallSpeed = 80f;
         [SerializeField] private float _maxFallSpeed = 120f;
+        private bool _endedJumpEarly = true;
+        private float _lastJumpPressed;
+        private bool CanUseCoyote => _coyoteUsable && !_colDown && _timeLeftGrounded + _coyoteTimeThreshold > Time.time;
+        private bool HasBufferedJump => _colDown && _lastJumpPressed + _jumpBuffer > Time.time;
         private float _apexPoint;
 
         //Gravity
+        [FormerlySerializedAs("_releasJumEarly")]
         [Header("Gravity")]
-        [SerializeField] private bool _releasJumEarly = true;
+        [SerializeField] private bool _releasJumpEarly = true;
         [SerializeField] private float _fallClamp = -40f;
         private float _fallSpeed;
         
         void Start()
         {
-
         }
 
         // Update is called once per frame
         void Update()
         {
             CalculateRayRanged();
-            
+           
             Debug.DrawRay(_raysUp.Start,_raysUp.Dir,Color.green);
             Debug.DrawRay(_raysUp.End,_raysUp.Dir,Color.green);
             
@@ -73,6 +80,19 @@ namespace SmoothPlayer
             Debug.DrawRay(_raysRight.Start,_raysRight.Dir,Color.yellow);
             Debug.DrawRay(_raysRight.End,_raysRight.Dir,Color.yellow);
 
+        }
+
+        private void RegisterInput()
+        {
+            _input = new PlayerFrameInput()
+            {
+                X = Input.GetAxis("Horizontal"),
+                JumpDown = Input.GetKeyDown(KeyCode.Space),
+                JumpUp = Input.GetKeyUp(KeyCode.Space)
+            };
+            if (_input.JumpDown) {
+                _lastJumpPressed = Time.time;
+            }
         }
 
         private void CollisionCheck()
@@ -117,18 +137,18 @@ namespace SmoothPlayer
 
         }
 
-        private void CalculateWalk(float x)
+        private void CalculateWalk()
         {
-            if (x != 0)
+            if (_input.X != 0)
             {
                 //Set horizontal speed
-                _currentHorizontalSpeed += x * _acceleration * Time.deltaTime;
+                _currentHorizontalSpeed += _input.X * _acceleration * Time.deltaTime;
 
                 //set limit to speed
                 _currentHorizontalSpeed = Mathf.Clamp(_currentHorizontalSpeed, -_moveClamp, _moveClamp);
                 
                 //bonus at the apex jump
-                var apexBonus = Mathf.Sign(x) * _apexBonus * _apexPoint;
+                var apexBonus = Mathf.Sign(_input.X) * _apexBonus * _apexPoint;
                 _currentHorizontalSpeed += apexBonus * Time.deltaTime;
             }
             else
@@ -137,7 +157,7 @@ namespace SmoothPlayer
                 _currentHorizontalSpeed =
                     Mathf.MoveTowards(_currentHorizontalSpeed, 0, _deAcceleration * Time.deltaTime);
             }
-            if(_currentHorizontalSpeed>0&& _colRight || _currentHorizontalSpeed<0&&_colLeft)
+            if(_currentHorizontalSpeed>0 && _colRight || _currentHorizontalSpeed<0 &&_colLeft)
             {
                 //Stopping move through wall
                 _currentHorizontalSpeed = 0;
@@ -152,7 +172,7 @@ namespace SmoothPlayer
             }
             else
             {
-                var fallSpeed = _releasJumEarly && _currentVerticalSpeed > 0
+                var fallSpeed = _releasJumpEarly && _currentVerticalSpeed > 0
                     ? _fallSpeed * _jumpEndEarlyGravityModifier
                     : _fallSpeed;
 
@@ -171,6 +191,7 @@ namespace SmoothPlayer
                 _apexPoint = 0;
             }
         }
+        
 
         private void OnDrawGizmos()
         {
