@@ -172,6 +172,7 @@ namespace SmoothPlayer
             }
             else
             {
+                //If release jump button early fallspeed getting higer than long press
                 var fallSpeed = _releasJumpEarly && _currentVerticalSpeed > 0
                     ? _fallSpeed * _jumpEndEarlyGravityModifier
                     : _fallSpeed;
@@ -192,6 +193,26 @@ namespace SmoothPlayer
             }
         }
         
+        private void CalculateJump() {
+            if (_input.JumpDown && CanUseCoyote || HasBufferedJump) {
+                _currentVerticalSpeed = _jumpHeight;
+                _endedJumpEarly = false;
+                _coyoteUsable = false;
+                _timeLeftGrounded = float.MinValue;
+                JumpingThisFrame = true;
+            }
+            else {
+                JumpingThisFrame = false;
+            }
+            
+            if (!_colDown && _input.JumpUp && !_endedJumpEarly && Velocity.y > 0) {
+                _endedJumpEarly = true;
+            }
+        
+            if (_colUp) {
+                if (_currentVerticalSpeed > 0) _currentVerticalSpeed = 0;
+            }
+        }
 
         private void OnDrawGizmos()
         {
