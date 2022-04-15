@@ -11,4 +11,10 @@ namespace SmoothPlayer
 
         public readonly Vector2 Start, End, Dir;
     }
+
+     public struct PlayerFrameInput {
+        public float X,Y;
+        public bool JumpDown;
+        public bool JumpUp;
+    }
 }
